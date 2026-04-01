@@ -37,6 +37,9 @@ FROM base AS build
 WORKDIR /app
 COPY --from=deps /app /app
 COPY . .
+RUN pnpm --filter @paperclipai/shared build || true
+RUN pnpm --filter @paperclipai/db build || true
+RUN cp -r packages/db/src/migrations packages/db/dist/migrations 2>/dev/null || true
 RUN pnpm --filter @paperclipai/ui build
 RUN pnpm --filter @paperclipai/plugin-sdk build
 RUN pnpm --filter @paperclipai/server build || true
