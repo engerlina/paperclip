@@ -70,7 +70,11 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins?
   const secret = process.env.BETTER_AUTH_SECRET ?? process.env.PAPERCLIP_AGENT_JWT_SECRET ?? "paperclip-dev-secret";
   const effectiveTrustedOrigins = trustedOrigins ?? deriveAuthTrustedOrigins(config);
 
-  const publicUrl = process.env.PAPERCLIP_PUBLIC_URL ?? baseUrl;
+  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
+  const publicUrl =
+    process.env.PAPERCLIP_PUBLIC_URL ??
+    (railwayDomain ? `https://${railwayDomain}` : undefined) ??
+    baseUrl;
   const isHttpOnly = publicUrl ? publicUrl.startsWith("http://") : false;
 
   const authConfig = {
