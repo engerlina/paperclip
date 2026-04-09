@@ -31,7 +31,7 @@ import { setupLiveEventsWebSocketServer } from "./realtime/live-events-ws.js";
 import { heartbeatService, reconcilePersistedRuntimeServicesOnStartup, routineService } from "./services/index.js";
 import { createStorageServiceFromConfig } from "./storage/index.js";
 import { printStartupBanner } from "./startup-banner.js";
-import { getBoardClaimWarningUrl, initializeBoardClaimChallenge } from "./board-claim.js";
+import { getBoardClaimWarningUrl, initializeBoardClaimChallenge, maybeAutoBootstrapCeoInvite } from "./board-claim.js";
 import { maybePersistWorktreeRuntimePorts } from "./worktree-config.js";
 
 type BetterAuthSessionUser = {
@@ -711,6 +711,29 @@ export async function startServer(): Promise<StartedServer> {
           ].join("\n"),
         );
       }
+
+      void maybeAutoBootstrapCeoInvite(db as any, {
+        deploymentMode: config.deploymentMode,
+        host: config.host,
+        port: listenPort,
+      }).then((bootstrapInviteUrl) => {
+        if (bootstrapInviteUrl) {
+          const green = "\x1b[42m\x1b[30m";
+          const cyan = "\x1b[36m";
+          const reset = "\x1b[0m";
+          console.log(
+            [
+              `${green}  FIRST-TIME SETUP  ${reset}`,
+              `${cyan}No admin account exists yet. Open this URL to create the first admin:${reset}`,
+              `${cyan}${bootstrapInviteUrl}${reset}`,
+              `${cyan}This link expires in 72 hours.${reset}`,
+            ].join("\n"),
+          );
+          logger.info({ bootstrapInviteUrl }, "Auto-created bootstrap CEO invite on first startup");
+        }
+      }).catch((err) => {
+        logger.warn({ err }, "Failed to auto-create bootstrap CEO invite");
+      });
 
       resolveListen();
     });

@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { createHash, randomBytes } from "node:crypto";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { companies, companyMemberships, instanceUserRoles } from "@paperclipai/db";
+import { companies, companyMemberships, instanceUserRoles, invites } from "@paperclipai/db";
 import type { DeploymentMode } from "@paperclipai/shared";
 
 const LOCAL_BOARD_USER_ID = "local-board";
@@ -68,8 +68,15 @@ export async function initializeBoardClaimChallenge(
 export function getBoardClaimWarningUrl(host: string, port: number): string | null {
   if (!activeChallenge) return null;
   if (activeChallenge.claimedAt || activeChallenge.expiresAt.getTime() <= Date.now()) return null;
+  const claimPath = `/board-claim/${activeChallenge.token}?code=${activeChallenge.code}`;
+  const publicUrl =
+    process.env.PAPERCLIP_PUBLIC_URL ??
+    (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : undefined);
+  if (publicUrl) {
+    return `${publicUrl.replace(/\/$/, "")}${claimPath}`;
+  }
   const visibleHost = host === "0.0.0.0" ? "localhost" : host;
-  return `http://${visibleHost}:${port}/board-claim/${activeChallenge.token}?code=${activeChallenge.code}`;
+  return `http://${visibleHost}:${port}${claimPath}`;
 }
 
 export function inspectBoardClaimChallenge(token: string, code: string | undefined) {
@@ -146,4 +153,56 @@ export async function claimBoardOwnership(
   }
 
   return { status: "claimed", claimedByUserId: opts.userId };
+}
+
+function resolvePublicBaseUrl(host: string, port: number): string {
+  const publicUrl =
+    process.env.PAPERCLIP_PUBLIC_URL ??
+    (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : undefined);
+  if (publicUrl) return publicUrl.replace(/\/$/, "");
+  const visibleHost = host === "0.0.0.0" ? "localhost" : host;
+  return `http://${visibleHost}:${port}`;
+}
+
+export async function maybeAutoBootstrapCeoInvite(
+  db: Db,
+  opts: { deploymentMode: DeploymentMode; host: string; port: number },
+): Promise<string | null> {
+  if (opts.deploymentMode !== "authenticated") return null;
+
+  const admins = await db
+    .select({ userId: instanceUserRoles.userId })
+    .from(instanceUserRoles)
+    .where(eq(instanceUserRoles.role, "instance_admin"));
+
+  if (admins.length > 0 && admins.some((a) => a.userId !== LOCAL_BOARD_USER_ID)) return null;
+
+  const now = new Date();
+  const existingActive = await db
+    .select({ id: invites.id })
+    .from(invites)
+    .where(
+      and(
+        eq(invites.inviteType, "bootstrap_ceo"),
+        isNull(invites.revokedAt),
+        isNull(invites.acceptedAt),
+        gt(invites.expiresAt, now),
+      ),
+    )
+    .then((rows) => rows[0] ?? null);
+
+  if (existingActive) return null;
+
+  const token = `pcp_bootstrap_${randomBytes(24).toString("hex")}`;
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  await db.insert(invites).values({
+    inviteType: "bootstrap_ceo",
+    tokenHash,
+    allowedJoinTypes: "human",
+    expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
+    invitedByUserId: "system",
+  });
+
+  const baseUrl = resolvePublicBaseUrl(opts.host, opts.port);
+  return `${baseUrl}/invite/${token}`;
 }
