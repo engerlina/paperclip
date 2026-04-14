@@ -121,9 +121,8 @@ function boardRoutes() {
     <>
       <Route index element={<Navigate to="dashboard" replace />} />
       <Route path="dashboard" element={<Dashboard />} />
-      {/* DISRO: Onboarding and companies routes removed */}
-      {/* <Route path="onboarding" element={<OnboardingRoutePage />} /> */}
-      {/* <Route path="companies" element={<Companies />} /> */}
+      <Route path="onboarding" element={<OnboardingRoutePage />} />
+      <Route path="companies" element={<Companies />} />
       <Route path="company/settings" element={<CompanySettings />} />
       <Route path="company/export/*" element={<CompanyExport />} />
       <Route path="company/import" element={<CompanyImport />} />
@@ -313,10 +312,18 @@ export function App() {
 
         <Route element={<CloudAccessGate />}>
           <Route index element={<CompanyRootRedirect />} />
-          {/* DISRO: Onboarding and instance settings removed - single company mode */}
-          {/* <Route path="onboarding" element={<OnboardingRoutePage />} /> */}
-          {/* <Route path="instance" ... /> */}
-          {/* <Route path="companies" ... /> */}
+          <Route path="onboarding" element={<OnboardingRoutePage />} />
+          {/* DISRO: Instance settings accessible but hidden in UI for non-admins (backend enforces access) */}
+          <Route path="instance" element={<Navigate to="/instance/settings/general" replace />} />
+          <Route path="instance/settings" element={<Layout />}>
+            <Route index element={<Navigate to="general" replace />} />
+            <Route path="general" element={<InstanceGeneralSettings />} />
+            <Route path="heartbeats" element={<InstanceSettings />} />
+            <Route path="experimental" element={<InstanceExperimentalSettings />} />
+            <Route path="plugins" element={<PluginManager />} />
+            <Route path="plugins/:pluginId" element={<PluginSettings />} />
+          </Route>
+          <Route path="companies" element={<UnprefixedBoardRedirect />} />
           <Route path="issues" element={<UnprefixedBoardRedirect />} />
           <Route path="issues/:issueId" element={<UnprefixedBoardRedirect />} />
           <Route path="routines" element={<UnprefixedBoardRedirect />} />

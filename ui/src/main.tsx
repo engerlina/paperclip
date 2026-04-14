@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "@/lib/router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
+import { AuthProvider } from "./context/AuthContext";
 import { CompanyProvider } from "./context/CompanyContext";
 import { LiveUpdatesProvider } from "./context/LiveUpdatesProvider";
 import { BreadcrumbProvider } from "./context/BreadcrumbContext";
@@ -41,7 +42,8 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <BrowserRouter>
-          <CompanyProvider>
+          <AuthProvider>
+            <CompanyProvider>
             <ToastProvider>
               <LiveUpdatesProvider>
                 <TooltipProvider>
@@ -59,7 +61,8 @@ createRoot(document.getElementById("root")!).render(
                 </TooltipProvider>
               </LiveUpdatesProvider>
             </ToastProvider>
-          </CompanyProvider>
+            </CompanyProvider>
+          </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>

@@ -1,6 +1,8 @@
 export type AuthSession = {
   session: { id: string; userId: string };
   user: { id: string; email: string | null; name: string | null };
+  // DISRO: Admin status for role-based UI
+  isInstanceAdmin?: boolean;
 };
 
 function toSession(value: unknown): AuthSession | null {
@@ -21,6 +23,8 @@ function toSession(value: unknown): AuthSession | null {
       email: typeof user.email === "string" ? user.email : null,
       name: typeof user.name === "string" ? user.name : null,
     },
+    // DISRO: Parse admin status
+    isInstanceAdmin: typeof record.isInstanceAdmin === "boolean" ? record.isInstanceAdmin : false,
   };
 }
 

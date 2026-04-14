@@ -120,6 +120,8 @@ export async function createApp(
         email: null,
         name: req.actor.source === "local_implicit" ? "Local Board" : null,
       },
+      // DISRO: Expose admin status to UI for role-based features
+      isInstanceAdmin: req.actor.isInstanceAdmin ?? false,
     });
   });
   if (opts.betterAuthHandler) {
