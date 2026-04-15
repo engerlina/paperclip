@@ -41,11 +41,11 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
           .find(c => c.startsWith("better-auth.session_token="))
           ?.split("=")[1];
 
-        logger.info({ hasCookie: !!rawSessionToken, cookieLength: rawSessionToken?.length, url: req.originalUrl }, "[auth] Checking session");
+        logger.debug({ hasCookie: !!rawSessionToken, url: req.originalUrl }, "[auth] Checking session");
 
         try {
           session = await opts.resolveSession(req);
-          logger.info({ hasSession: !!session, userId: session?.user?.id }, "[auth] Session resolved via BetterAuth");
+          logger.debug({ hasSession: !!session, userId: session?.user?.id }, "[auth] Session resolved via BetterAuth");
         } catch (err) {
           logger.warn(
             { err, method: req.method, url: req.originalUrl },
@@ -56,7 +56,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
         // Fallback: Direct SSO session lookup if BetterAuth didn't find a session
         // This handles SSO sessions that bypass BetterAuth's signed cookie format
         if (!session && rawSessionToken) {
-          logger.info({ tokenLength: rawSessionToken.length }, "[auth] Trying direct SSO session lookup");
+          logger.debug({ tokenLength: rawSessionToken.length }, "[auth] Trying direct SSO session lookup");
           try {
             const ssoSession = await db
               .select({
@@ -76,7 +76,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
               .then(rows => rows[0]);
 
             if (ssoSession) {
-              logger.info({ userId: ssoSession.userId }, "[auth] SSO session found directly");
+              logger.debug({ userId: ssoSession.userId }, "[auth] SSO session found directly");
               session = {
                 session: { id: "sso", userId: ssoSession.userId },
                 user: { id: ssoSession.userId, email: ssoSession.userEmail, name: ssoSession.userName },

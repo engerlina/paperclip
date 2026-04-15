@@ -64,13 +64,11 @@ export function ssoRoutes(db: Db) {
   const router = Router();
 
   router.get("/api/auth/sso", async (req, res) => {
-    console.log("[sso] SSO endpoint hit");
     const token = req.query.token as string | undefined;
     const redirectParam = req.query.redirect as string | undefined;
     const redirect = redirectParam && isValidRedirect(redirectParam) ? redirectParam : "/";
 
     if (!token) {
-      console.log("[sso] Missing token");
       res.status(400).json({ error: "Missing token" });
       return;
     }
@@ -84,11 +82,9 @@ export function ssoRoutes(db: Db) {
 
     const payload = parseAndVerifyToken(token, secret);
     if (!payload) {
-      console.log("[sso] Invalid or expired token");
       res.status(401).json({ error: "Invalid or expired token" });
       return;
     }
-    console.log("[sso] Token verified, payload:", { sub: payload.sub, email: payload.email, companyId: payload.companyId });
 
     try {
       // Validate company exists before proceeding
@@ -180,8 +176,6 @@ export function ssoRoutes(db: Db) {
       });
 
       // Set session cookie (BetterAuth format)
-      console.log("[sso] Setting cookie, token length:", sessionToken.token.length, "expires:", sessionToken.expiresAt);
-      console.log("[sso] NODE_ENV:", process.env.NODE_ENV, "secure:", process.env.NODE_ENV === "production");
       res.cookie("better-auth.session_token", sessionToken.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -191,7 +185,6 @@ export function ssoRoutes(db: Db) {
       });
 
       // Redirect to UI
-      console.log("[sso] Redirecting to:", redirect);
       res.redirect(302, redirect);
 
     } catch (err) {
