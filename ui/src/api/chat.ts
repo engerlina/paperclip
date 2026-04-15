@@ -50,19 +50,36 @@ export const chatApi = {
     companyId: string,
     ceoAgentId: string,
     firstMessage: string
-  ): Promise<Issue> => {
+  ): Promise<{ issue: Issue; run: { id?: string; status: string } }> => {
     const title = firstMessage.length > 50
       ? firstMessage.slice(0, 47) + "..."
       : firstMessage;
 
-    return issuesApi.create(companyId, {
+    // Create the issue (thread)
+    const issue = await issuesApi.create(companyId, {
       title,
-      description: firstMessage,
+      description: "", // Don't duplicate message in description
       assigneeAgentId: ceoAgentId,
       status: "in_progress",
       priority: "medium",
       originKind: CHAT_ORIGIN_KIND,
     });
+
+    // Add first message as a comment so it shows in the chat
+    await issuesApi.addComment(issue.id, firstMessage);
+
+    // Wake up the agent to respond
+    const run = await agentsApi.wakeup(
+      ceoAgentId,
+      {
+        source: "on_demand",
+        triggerDetail: "manual",
+        reason: `New chat thread ${issue.id}`,
+      },
+      companyId
+    );
+
+    return { issue, run };
   },
 
   getMessages: async (threadId: string): Promise<ChatMessage[]> => {

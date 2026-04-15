@@ -63,24 +63,37 @@ describe("chatApi", () => {
   });
 
   describe("createThread", () => {
-    it("creates an issue with chat origin assigned to CEO", async () => {
+    it("creates an issue with chat origin assigned to CEO, adds comment, and wakes agent", async () => {
       const mockIssue = { id: "new-issue", title: "Hello world" };
+      const mockComment = { id: "comment-1", body: "Hello world" };
+      const mockRun = { id: "run-1", status: "queued" };
       vi.mocked(issuesApi.create).mockResolvedValue(mockIssue as any);
+      vi.mocked(issuesApi.addComment).mockResolvedValue(mockComment as any);
+      vi.mocked(agentsApi.wakeup).mockResolvedValue(mockRun as any);
 
       const result = await chatApi.createThread("company-123", "ceo-id", "Hello world");
 
       expect(issuesApi.create).toHaveBeenCalledWith("company-123", expect.objectContaining({
         title: "Hello world",
-        description: "Hello world",
+        description: "",
         assigneeAgentId: "ceo-id",
         status: "in_progress",
         originKind: "chat",
       }));
-      expect(result.id).toBe("new-issue");
+      expect(issuesApi.addComment).toHaveBeenCalledWith("new-issue", "Hello world");
+      expect(agentsApi.wakeup).toHaveBeenCalledWith(
+        "ceo-id",
+        expect.objectContaining({ source: "on_demand" }),
+        "company-123"
+      );
+      expect(result.issue.id).toBe("new-issue");
+      expect(result.run).toEqual(mockRun);
     });
 
     it("truncates long messages for title", async () => {
       vi.mocked(issuesApi.create).mockResolvedValue({ id: "issue" } as any);
+      vi.mocked(issuesApi.addComment).mockResolvedValue({ id: "c1" } as any);
+      vi.mocked(agentsApi.wakeup).mockResolvedValue({ id: "run-1", status: "queued" } as any);
 
       const longMessage = "A".repeat(100);
       await chatApi.createThread("company-123", "ceo-id", longMessage);

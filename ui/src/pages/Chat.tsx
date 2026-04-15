@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { useCompany } from "@/context/CompanyContext";
 import { chatApi } from "@/api/chat";
+import { heartbeatsApi, type LiveRunForIssue } from "@/api/heartbeats";
+import { useLiveRunTranscripts } from "@/components/transcript/useLiveRunTranscripts";
+import { RunTranscriptView } from "@/components/transcript/RunTranscriptView";
 import {
   ChatMessage,
   ChatTypingIndicator,
@@ -25,6 +28,7 @@ export function Chat() {
   const { selectedCompanyId } = useCompany();
   const [searchQuery, setSearchQuery] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Find CEO agent
@@ -50,16 +54,54 @@ export function Chat() {
     refetchInterval: isThinking ? 1000 : 5000,
   });
 
+  // Get live runs for streaming when agent is processing
+  const { data: liveRuns = [] } = useQuery({
+    queryKey: ["chat", "liveRuns", threadId],
+    queryFn: () => heartbeatsApi.liveRunsForIssue(threadId!),
+    enabled: !!threadId && isThinking,
+    refetchInterval: 2000,
+  });
+
+  // Combine with current run if we have one
+  const runsForTranscript = useMemo((): LiveRunForIssue[] => {
+    const runs: LiveRunForIssue[] = [...liveRuns];
+    // If we have a currentRunId that's not in liveRuns, add a placeholder
+    if (currentRunId && !runs.some((r) => r.id === currentRunId)) {
+      runs.push({
+        id: currentRunId,
+        status: "running",
+        adapterType: "claude_local",
+        createdAt: new Date().toISOString(),
+      } as LiveRunForIssue);
+    }
+    return runs;
+  }, [liveRuns, currentRunId]);
+
+  // Get live transcript for streaming Claude Code output
+  const { transcriptByRun } = useLiveRunTranscripts({
+    runs: runsForTranscript,
+    companyId: selectedCompanyId,
+  });
+
+  // Get transcript for current run
+  const currentTranscript = useMemo(() => {
+    if (!currentRunId) return [];
+    return transcriptByRun.get(currentRunId) ?? [];
+  }, [transcriptByRun, currentRunId]);
+
   // Create new thread mutation
   const createThread = useMutation({
     mutationFn: async (message: string) => {
       if (!selectedCompanyId || !ceoAgent) throw new Error("No CEO agent");
       return chatApi.createThread(selectedCompanyId, ceoAgent.id, message);
     },
-    onSuccess: (issue) => {
-      queryClient.invalidateQueries({ queryKey: ["chat", "threads"] });
+    onSuccess: ({ issue, run }) => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "threads", selectedCompanyId] });
       navigate(`/chat/${issue.id}`);
       setIsThinking(true);
+      if (run.id) {
+        setCurrentRunId(run.id);
+      }
     },
     onError: (error) => {
       console.error("Failed to create thread:", error);
@@ -77,12 +119,17 @@ export function Chat() {
     },
     onMutate: () => {
       setIsThinking(true);
+      setCurrentRunId(null); // Clear old run
     },
-    onSuccess: () => {
+    onSuccess: ({ run }) => {
       queryClient.invalidateQueries({ queryKey: ["chat", "messages", threadId] });
+      if (run.id) {
+        setCurrentRunId(run.id);
+      }
     },
     onError: (error) => {
       setIsThinking(false);
+      setCurrentRunId(null);
       console.error("Failed to send message:", error);
       alert(`Failed to send message: ${error instanceof Error ? error.message : "Unknown error"}`);
     },
@@ -94,14 +141,15 @@ export function Chat() {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.authorType === "agent") {
         setIsThinking(false);
+        setCurrentRunId(null);
       }
     }
   }, [messages]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages or transcript updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, currentTranscript]);
 
   const handleSend = useCallback(
     (message: string) => {
@@ -179,7 +227,19 @@ export function Chat() {
                 />
               ))}
               {isThinking && (
-                <ChatTypingIndicator text="Reviewing your request..." />
+                <div className="space-y-2">
+                  {currentTranscript.length > 0 ? (
+                    <div className="bg-muted/50 rounded-lg p-3 text-sm overflow-hidden">
+                      <RunTranscriptView
+                        entries={currentTranscript}
+                        density="compact"
+                        streaming
+                      />
+                    </div>
+                  ) : (
+                    <ChatTypingIndicator text="Reviewing your request..." />
+                  )}
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>
