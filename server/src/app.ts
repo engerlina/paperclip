@@ -125,10 +125,11 @@ export async function createApp(
       isInstanceAdmin: req.actor.isInstanceAdmin ?? false,
     });
   });
+  // SSO route must be mounted BEFORE BetterAuth wildcard handler
+  app.use(ssoRoutes(db));
   if (opts.betterAuthHandler) {
     app.all("/api/auth/*authPath", opts.betterAuthHandler);
   }
-  app.use(ssoRoutes(db));
   app.use(llmRoutes(db));
 
   // Mount API routes
