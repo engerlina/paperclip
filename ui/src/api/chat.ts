@@ -76,7 +76,7 @@ export const chatApi = {
     body: string,
     ceoAgentId: string,
     companyId: string
-  ): Promise<{ comment: IssueComment; run: unknown }> => {
+  ): Promise<{ comment: IssueComment; run: { id?: string; status: string } }> => {
     const comment = await issuesApi.addComment(threadId, body);
     const run = await agentsApi.wakeup(
       ceoAgentId,

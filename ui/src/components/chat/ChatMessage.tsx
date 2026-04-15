@@ -8,13 +8,12 @@ interface ChatMessageProps {
   body: string;
   authorType: "user" | "agent";
   authorName: string;
-  timestamp: Date;
+  timestamp?: Date;
 }
 
 export const ChatMessage = memo(function ChatMessage({
   body,
   authorType,
-  timestamp,
 }: ChatMessageProps) {
   const isUser = authorType === "user";
 

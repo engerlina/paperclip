@@ -28,7 +28,7 @@ export function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Find CEO agent
-  const { data: ceoAgent } = useQuery({
+  const { data: ceoAgent, isLoading: isCeoLoading } = useQuery({
     queryKey: ["chat", "ceo", selectedCompanyId],
     queryFn: () => chatApi.findCeoAgent(selectedCompanyId!),
     enabled: !!selectedCompanyId,
@@ -105,6 +105,7 @@ export function Chat() {
     [threadId, sendMessage, createThread]
   );
 
+  // TODO: Get user name from auth context
   const userName = "there";
 
   return (
@@ -142,12 +143,16 @@ export function Chat() {
               {getGreeting()}, {userName}!
             </h1>
             <p className="text-muted-foreground mb-8">
-              Want an update? Start chatting below.
+              {isCeoLoading
+                ? "Loading..."
+                : !ceoAgent
+                  ? "Company Manager agent not found. Please contact support."
+                  : "Want an update? Start chatting below."}
             </p>
             <div className="w-full max-w-2xl">
               <ChatInput
                 onSend={handleSend}
-                disabled={!ceoAgent || createThread.isPending}
+                disabled={!ceoAgent || isCeoLoading || createThread.isPending}
               />
             </div>
           </div>
