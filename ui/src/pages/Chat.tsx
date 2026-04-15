@@ -61,6 +61,10 @@ export function Chat() {
       navigate(`/chat/${issue.id}`);
       setIsThinking(true);
     },
+    onError: (error) => {
+      console.error("Failed to create thread:", error);
+      alert(`Failed to send message: ${error instanceof Error ? error.message : "Unknown error"}`);
+    },
   });
 
   // Send message mutation
@@ -76,6 +80,11 @@ export function Chat() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", "messages", threadId] });
+    },
+    onError: (error) => {
+      setIsThinking(false);
+      console.error("Failed to send message:", error);
+      alert(`Failed to send message: ${error instanceof Error ? error.message : "Unknown error"}`);
     },
   });
 

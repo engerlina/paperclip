@@ -24,7 +24,13 @@ const CHAT_ORIGIN_KIND = "chat";
 export const chatApi = {
   findCeoAgent: async (companyId: string): Promise<Agent | null> => {
     const agents = await agentsApi.list(companyId);
-    return agents.find((a) => a.role === "ceo" && a.status !== "terminated") ?? null;
+    // Look for CEO role first, fallback to Manager Agent by name (import may not set role correctly)
+    const active = agents.filter((a) => a.status !== "terminated");
+    return (
+      active.find((a) => a.role === "ceo") ??
+      active.find((a) => a.name === "Manager Agent") ??
+      null
+    );
   },
 
   listThreads: async (companyId: string): Promise<ChatThread[]> => {

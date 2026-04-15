@@ -151,9 +151,15 @@ export function ssoRoutes(db: Db) {
             principalType: "user",
             principalId: ssoUserId,
             status: "active",
+            membershipRole: "admin", // Grant full access to Disro users
             createdAt: now,
             updatedAt: now,
           });
+        } else if (!existingMembership.membershipRole) {
+          // Upgrade existing membership to admin if role was missing
+          await tx.update(companyMemberships)
+            .set({ membershipRole: "admin", updatedAt: now })
+            .where(eq(companyMemberships.id, existingMembership.id));
         }
 
         // Create session (BetterAuth format)
