@@ -32,8 +32,11 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
       if (opts.deploymentMode === "authenticated" && opts.resolveSession) {
         let session: BetterAuthSessionResult | null = null;
+        const sessionCookie = req.cookies?.["better-auth.session_token"];
+        logger.info({ hasCookie: !!sessionCookie, cookieLength: sessionCookie?.length, url: req.originalUrl }, "[auth] Checking session");
         try {
           session = await opts.resolveSession(req);
+          logger.info({ hasSession: !!session, userId: session?.user?.id }, "[auth] Session resolved");
         } catch (err) {
           logger.warn(
             { err, method: req.method, url: req.originalUrl },
