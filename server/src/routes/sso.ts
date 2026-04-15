@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { authUsers, authSessions, companyMemberships } from "@paperclipai/db";
+import { authUsers, authSessions, companyMemberships, companies } from "@paperclipai/db";
 
 const SSO_TOKEN_MAX_AGE_MS = 60_000; // 60 seconds
 
@@ -55,12 +55,18 @@ function generateId(): string {
   return randomBytes(16).toString("hex");
 }
 
+function isValidRedirect(url: string): boolean {
+  // Only allow relative paths starting with / but not //
+  return url.startsWith("/") && !url.startsWith("//");
+}
+
 export function ssoRoutes(db: Db) {
   const router = Router();
 
   router.get("/api/auth/sso", async (req, res) => {
     const token = req.query.token as string | undefined;
-    const redirect = (req.query.redirect as string) || "/";
+    const redirectParam = req.query.redirect as string | undefined;
+    const redirect = redirectParam && isValidRedirect(redirectParam) ? redirectParam : "/";
 
     if (!token) {
       res.status(400).json({ error: "Missing token" });
@@ -81,83 +87,100 @@ export function ssoRoutes(db: Db) {
     }
 
     try {
+      // Validate company exists before proceeding
+      const company = await db
+        .select({ id: companies.id })
+        .from(companies)
+        .where(eq(companies.id, payload.companyId))
+        .then(rows => rows[0]);
+
+      if (!company) {
+        res.status(400).json({ error: "Invalid company" });
+        return;
+      }
+
       // User IDs are prefixed with "disro:" to namespace them from native Paperclip users
       const ssoUserId = `disro:${payload.sub}`;
       const now = new Date();
 
-      // Find or create user
-      const existingUser = await db
-        .select()
-        .from(authUsers)
-        .where(eq(authUsers.id, ssoUserId))
-        .then(rows => rows[0]);
+      // Wrap user creation, membership, and session in a transaction
+      const sessionToken = await db.transaction(async (tx) => {
+        // Find or create user
+        const existingUser = await tx
+          .select()
+          .from(authUsers)
+          .where(eq(authUsers.id, ssoUserId))
+          .then(rows => rows[0]);
 
-      if (!existingUser) {
-        await db.insert(authUsers).values({
-          id: ssoUserId,
-          email: payload.email,
-          name: payload.name || payload.email.split("@")[0] || "User",
-          emailVerified: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } else {
-        // Update user info in case it changed
-        await db.update(authUsers)
-          .set({
+        if (!existingUser) {
+          await tx.insert(authUsers).values({
+            id: ssoUserId,
             email: payload.email,
-            name: payload.name || existingUser.name,
+            name: payload.name || payload.email.split("@")[0] || "User",
+            emailVerified: true,
+            createdAt: now,
             updatedAt: now,
-          })
-          .where(eq(authUsers.id, ssoUserId));
-      }
+          });
+        } else {
+          // Update user info in case it changed
+          await tx.update(authUsers)
+            .set({
+              email: payload.email,
+              name: payload.name || existingUser.name,
+              updatedAt: now,
+            })
+            .where(eq(authUsers.id, ssoUserId));
+        }
 
-      // Ensure company membership exists
-      const existingMembership = await db
-        .select()
-        .from(companyMemberships)
-        .where(
-          and(
-            eq(companyMemberships.companyId, payload.companyId),
-            eq(companyMemberships.principalType, "user"),
-            eq(companyMemberships.principalId, ssoUserId),
+        // Ensure company membership exists
+        const existingMembership = await tx
+          .select()
+          .from(companyMemberships)
+          .where(
+            and(
+              eq(companyMemberships.companyId, payload.companyId),
+              eq(companyMemberships.principalType, "user"),
+              eq(companyMemberships.principalId, ssoUserId),
+            )
           )
-        )
-        .then(rows => rows[0]);
+          .then(rows => rows[0]);
 
-      if (!existingMembership) {
-        await db.insert(companyMemberships).values({
-          companyId: payload.companyId,
-          principalType: "user",
-          principalId: ssoUserId,
-          status: "active",
+        if (!existingMembership) {
+          await tx.insert(companyMemberships).values({
+            companyId: payload.companyId,
+            principalType: "user",
+            principalId: ssoUserId,
+            status: "active",
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        // Create session (BetterAuth format)
+        const sessionId = generateId();
+        const token = generateSessionToken();
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+        await tx.insert(authSessions).values({
+          id: sessionId,
+          userId: ssoUserId,
+          token,
+          expiresAt,
           createdAt: now,
           updatedAt: now,
+          ipAddress: req.ip || null,
+          userAgent: req.headers["user-agent"] || null,
         });
-      }
 
-      // Create session (BetterAuth format)
-      const sessionId = generateId();
-      const sessionToken = generateSessionToken();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-      await db.insert(authSessions).values({
-        id: sessionId,
-        userId: ssoUserId,
-        token: sessionToken,
-        expiresAt,
-        createdAt: now,
-        updatedAt: now,
-        ipAddress: req.ip || null,
-        userAgent: req.headers["user-agent"] || null,
+        return { token, expiresAt };
       });
 
       // Set session cookie (BetterAuth format)
-      res.cookie("better-auth.session_token", sessionToken, {
+      res.cookie("better-auth.session_token", sessionToken.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        expires: expiresAt,
+        expires: sessionToken.expiresAt,
         path: "/",
       });
 
