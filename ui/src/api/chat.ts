@@ -65,7 +65,7 @@ export const chatApi = {
       id: comment.id,
       body: comment.body,
       authorType: comment.authorAgentId ? "agent" : "user",
-      authorName: comment.authorAgentId ? "Company Manager" : "You",
+      authorName: comment.authorAgentId ? "Manager Agent" : "You",
       authorAgentId: comment.authorAgentId ?? null,
       createdAt: new Date(comment.createdAt),
     }));
