@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { authUsers, authSessions, companyMemberships, companies } from "@paperclipai/db";
+import { authUsers, authSessions, companyMemberships, companies, principalPermissionGrants } from "@paperclipai/db";
 
 const SSO_TOKEN_MAX_AGE_MS = 60_000; // 60 seconds
 
@@ -161,6 +161,16 @@ export function ssoRoutes(db: Db) {
             .set({ membershipRole: "admin", updatedAt: now })
             .where(eq(companyMemberships.id, existingMembership.id));
         }
+
+        // Grant tasks:assign permission (required to create/assign issues)
+        await tx.insert(principalPermissionGrants).values({
+          companyId: payload.companyId,
+          principalType: "user",
+          principalId: ssoUserId,
+          permissionKey: "tasks:assign",
+          createdAt: now,
+          updatedAt: now,
+        }).onConflictDoNothing(); // Skip if already granted
 
         // Create session (BetterAuth format)
         const sessionId = generateId();
