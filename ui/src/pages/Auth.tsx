@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from "@/lib/router";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
-import { Zap } from "lucide-react";
 
 type AuthMode = "sign_in" | "sign_up";
 
@@ -72,9 +71,9 @@ export function AuthPage() {
       {/* Left half — form */}
       <div className="w-full md:w-1/2 flex flex-col overflow-y-auto">
         <div className="w-full max-w-md mx-auto my-auto px-8 py-12">
-          <div className="flex items-center gap-2 mb-8">
-            <Zap className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Disro</span>
+          <div className="mb-8">
+            <img src="/disro-logo.svg" alt="Disro" className="h-6 dark:hidden" />
+            <img src="/disro-logo-white.svg" alt="Disro" className="h-6 hidden dark:block" />
           </div>
 
           <h1 className="text-xl font-semibold">
@@ -173,10 +172,8 @@ export function AuthPage() {
       {/* Right half — Disro branding (hidden on mobile) */}
       <div className="hidden md:flex w-1/2 items-center justify-center bg-gradient-to-br from-background to-muted/30">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Zap className="h-12 w-12 text-primary" />
-            <span className="text-5xl font-bold tracking-tight">Disro</span>
-          </div>
+          <img src="/disro-logo.svg" alt="Disro" className="h-16 mx-auto mb-6 dark:hidden" />
+          <img src="/disro-logo-white.svg" alt="Disro" className="h-16 mx-auto mb-6 hidden dark:block" />
           <p className="text-muted-foreground text-lg">AI-Powered Catalog Intelligence</p>
         </div>
       </div>
