@@ -65,7 +65,7 @@ export function Sidebar() {
           <path d="M5.12207 22.9678L5.19158 0.474854L10.7217 0.963731L5.12207 22.9678Z" fill="currentColor"/>
           <path d="M14.9741 29.262L19.4783 51.4398L13.9287 51.7387L14.9741 29.262Z" fill="currentColor"/>
         </svg>
-        <span className="text-sm font-bold text-foreground">Disro Agents</span>
+        <span className="text-sm font-bold text-foreground">Disro</span>
         <div className="flex-1" />
         <Button
           variant="ghost"
