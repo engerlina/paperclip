@@ -4,8 +4,7 @@ import { useNavigate, useSearchParams } from "@/lib/router";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
-import { AsciiArtAnimation } from "@/components/AsciiArtAnimation";
-import { Sparkles } from "lucide-react";
+import { Zap } from "lucide-react";
 
 type AuthMode = "sign_in" | "sign_up";
 
@@ -74,17 +73,17 @@ export function AuthPage() {
       <div className="w-full md:w-1/2 flex flex-col overflow-y-auto">
         <div className="w-full max-w-md mx-auto my-auto px-8 py-12">
           <div className="flex items-center gap-2 mb-8">
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Paperclip</span>
+            <Zap className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Disro</span>
           </div>
 
           <h1 className="text-xl font-semibold">
-            {mode === "sign_in" ? "Sign in to Paperclip" : "Create your Paperclip account"}
+            {mode === "sign_in" ? "Sign in to Disro" : "Create your Disro account"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "sign_in"
-              ? "Use your email and password to access this instance."
-              : "Create an account for this instance. Email confirmation is not required in v1."}
+              ? "Use your email and password to access your account."
+              : "Create your account to get started."}
           </p>
 
           <form
@@ -171,9 +170,15 @@ export function AuthPage() {
         </div>
       </div>
 
-      {/* Right half — ASCII art animation (hidden on mobile) */}
-      <div className="hidden md:block w-1/2 overflow-hidden">
-        <AsciiArtAnimation />
+      {/* Right half — Disro branding (hidden on mobile) */}
+      <div className="hidden md:flex w-1/2 items-center justify-center bg-gradient-to-br from-background to-muted/30">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Zap className="h-12 w-12 text-primary" />
+            <span className="text-5xl font-bold tracking-tight">Disro</span>
+          </div>
+          <p className="text-muted-foreground text-lg">AI-Powered Catalog Intelligence</p>
+        </div>
       </div>
     </div>
   );
