@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import type { Request, RequestHandler } from "express";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, gt } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { agentApiKeys, agents, companyMemberships, instanceUserRoles } from "@paperclipai/db";
+import { agentApiKeys, agents, companyMemberships, instanceUserRoles, authSessions, authUsers } from "@paperclipai/db";
 import { verifyLocalAgentJwt } from "../agent-auth-jwt.js";
 import type { DeploymentMode } from "@paperclipai/shared";
 import type { BetterAuthSessionResult } from "../auth/better-auth.js";
@@ -32,14 +32,61 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
       if (opts.deploymentMode === "authenticated" && opts.resolveSession) {
         let session: BetterAuthSessionResult | null = null;
+
+        // Parse raw cookie from header (cookie-parser not installed)
+        const cookieHeader = req.headers.cookie || "";
+        const rawSessionToken = cookieHeader
+          .split(";")
+          .map(c => c.trim())
+          .find(c => c.startsWith("better-auth.session_token="))
+          ?.split("=")[1];
+
+        logger.debug({ hasCookie: !!rawSessionToken, url: req.originalUrl }, "[auth] Checking session");
+
         try {
           session = await opts.resolveSession(req);
+          logger.debug({ hasSession: !!session, userId: session?.user?.id }, "[auth] Session resolved via BetterAuth");
         } catch (err) {
           logger.warn(
             { err, method: req.method, url: req.originalUrl },
             "Failed to resolve auth session from request headers",
           );
         }
+
+        // Fallback: Direct SSO session lookup if BetterAuth didn't find a session
+        // This handles SSO sessions that bypass BetterAuth's signed cookie format
+        if (!session && rawSessionToken) {
+          logger.debug({ tokenLength: rawSessionToken.length }, "[auth] Trying direct SSO session lookup");
+          try {
+            const ssoSession = await db
+              .select({
+                userId: authSessions.userId,
+                expiresAt: authSessions.expiresAt,
+                userName: authUsers.name,
+                userEmail: authUsers.email,
+              })
+              .from(authSessions)
+              .innerJoin(authUsers, eq(authSessions.userId, authUsers.id))
+              .where(
+                and(
+                  eq(authSessions.token, rawSessionToken),
+                  gt(authSessions.expiresAt, new Date()),
+                )
+              )
+              .then(rows => rows[0]);
+
+            if (ssoSession) {
+              logger.debug({ userId: ssoSession.userId }, "[auth] SSO session found directly");
+              session = {
+                session: { id: "sso", userId: ssoSession.userId },
+                user: { id: ssoSession.userId, email: ssoSession.userEmail, name: ssoSession.userName },
+              };
+            }
+          } catch (err) {
+            logger.warn({ err }, "[auth] Failed direct SSO session lookup");
+          }
+        }
+
         if (session?.user?.id) {
           const userId = session.user.id;
           const [roleRow, memberships] = await Promise.all([

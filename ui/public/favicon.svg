@@ -1,9 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <style>
-    path { stroke: #18181b; }
-    @media (prefers-color-scheme: dark) {
-      path { stroke: #e4e4e7; }
-    }
-  </style>
-  <path stroke-width="2" d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/>
+<svg width="36" height="47" viewBox="0 0 36 47" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M7.36908 26.5454L4.92151 46.7721L0 45.9251L7.36908 26.5454Z" fill="black"/>
+<path d="M10.7677 25.5928L21.7026 43.7652L17.0022 45.2468L10.7677 25.5928Z" fill="black"/>
+<path d="M12.2113 23.8452L29.0515 38.554L25.0774 41.1172L12.2113 23.8452Z" fill="black"/>
+<path d="M11.0932 20.498L32.3636 30.4533L29.465 33.874L11.0932 20.498Z" fill="black"/>
+<path d="M11.4124 19.2498L35.2485 23.5793L33.678 27.557L11.4124 19.2498Z" fill="black"/>
+<path d="M10.0176 17.9661L34.3311 16.2898L34.2268 20.478L10.0176 17.9661Z" fill="black"/>
+<path d="M8.59283 17.2603L31.2504 9.72583L32.6224 13.7548L8.59283 17.2603Z" fill="black"/>
+<path d="M5.94934 17.0187L24.967 4.28564L27.6947 7.8037L5.94934 17.0187Z" fill="black"/>
+<path d="M2.97888 17.7746L16.6893 0.960205L20.5327 3.65843L2.97888 17.7746Z" fill="black"/>
+<path d="M0.89946 19.4236L8.10143 0L12.7252 1.64176L0.89946 19.4236Z" fill="black"/>
+<path d="M0.110519 20.7585L0.173342 0.429199L5.1715 0.87105L0.110519 20.7585Z" fill="black"/>
+<path d="M9.01496 26.4473L13.0859 46.4918L8.07011 46.7619L9.01496 26.4473Z" fill="black"/>
 </svg>

@@ -33,6 +33,7 @@ COPY patches/ patches/
 
 RUN pnpm install --frozen-lockfile
 
+# Cache bust: 2026-04-15-v2
 FROM base AS build
 WORKDIR /app
 COPY --from=deps /app /app

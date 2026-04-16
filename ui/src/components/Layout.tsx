@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Moon, Settings, Sun } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate, useParams } from "@/lib/router";
+// DISRO: CompanyRail shown only for admins
 import { CompanyRail } from "./CompanyRail";
 import { Sidebar } from "./Sidebar";
+import { useAuth } from "../context/AuthContext";
 import { InstanceSidebar } from "./InstanceSidebar";
 import { BreadcrumbBar } from "./BreadcrumbBar";
 import { PropertiesPanel } from "./PropertiesPanel";
@@ -50,6 +52,8 @@ export function Layout() {
   const { sidebarOpen, setSidebarOpen, toggleSidebar, isMobile } = useSidebar();
   const { openNewIssue, openOnboarding } = useDialog();
   const { togglePanelVisible } = usePanel();
+  // DISRO: Check if user is admin for role-based UI
+  const { isInstanceAdmin } = useAuth();
   const {
     companies,
     loading: companiesLoading,
@@ -291,40 +295,39 @@ export function Layout() {
             )}
           >
             <div className="flex flex-1 min-h-0 overflow-hidden">
-              <CompanyRail />
+              {/* DISRO: CompanyRail shown only for admins */}
+              {isInstanceAdmin && <CompanyRail />}
               {isInstanceSettingsRoute ? <InstanceSidebar /> : <Sidebar />}
             </div>
+            {/* DISRO: Show full footer for admins, simplified for merchants */}
             <div className="border-t border-r border-border px-3 py-2 bg-background">
               <div className="flex items-center gap-1">
-                <a
-                  href="https://docs.paperclip.ing/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors text-foreground/80 hover:bg-accent/50 hover:text-foreground flex-1 min-w-0"
-                >
-                  <BookOpen className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Documentation</span>
-                </a>
-                {health?.version && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="px-2 text-xs text-muted-foreground shrink-0 cursor-default">v</span>
-                    </TooltipTrigger>
-                    <TooltipContent>v{health.version}</TooltipContent>
-                  </Tooltip>
+                {isInstanceAdmin && (
+                  <>
+                    <a
+                      href="https://docs.paperclip.ing/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors text-foreground/80 hover:bg-accent/50 hover:text-foreground flex-1 min-w-0"
+                    >
+                      <BookOpen className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Documentation</span>
+                    </a>
+                    <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" asChild>
+                      <Link
+                        to={instanceSettingsTarget}
+                        aria-label="Instance settings"
+                        title="Instance settings"
+                        onClick={() => {
+                          if (isMobile) setSidebarOpen(false);
+                        }}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </>
                 )}
-                <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" asChild>
-                  <Link
-                    to={instanceSettingsTarget}
-                    aria-label="Instance settings"
-                    title="Instance settings"
-                    onClick={() => {
-                      if (isMobile) setSidebarOpen(false);
-                    }}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Link>
-                </Button>
+                {!isInstanceAdmin && <div className="flex-1" />}
                 <Button
                   type="button"
                   variant="ghost"
@@ -342,7 +345,8 @@ export function Layout() {
         ) : (
           <div className="flex h-full flex-col shrink-0">
             <div className="flex flex-1 min-h-0">
-              <CompanyRail />
+              {/* DISRO: CompanyRail shown only for admins */}
+              {isInstanceAdmin && <CompanyRail />}
               <div
                 className={cn(
                   "overflow-hidden transition-[width] duration-100 ease-out",
@@ -352,37 +356,32 @@ export function Layout() {
                 {isInstanceSettingsRoute ? <InstanceSidebar /> : <Sidebar />}
               </div>
             </div>
+            {/* DISRO: Show full footer for admins, simplified for merchants */}
             <div className="border-t border-r border-border px-3 py-2">
               <div className="flex items-center gap-1">
-                <a
-                  href="https://docs.paperclip.ing/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors text-foreground/80 hover:bg-accent/50 hover:text-foreground flex-1 min-w-0"
-                >
-                  <BookOpen className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Documentation</span>
-                </a>
-                {health?.version && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="px-2 text-xs text-muted-foreground shrink-0 cursor-default">v</span>
-                    </TooltipTrigger>
-                    <TooltipContent>v{health.version}</TooltipContent>
-                  </Tooltip>
+                {isInstanceAdmin && (
+                  <>
+                    <a
+                      href="https://docs.paperclip.ing/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors text-foreground/80 hover:bg-accent/50 hover:text-foreground flex-1 min-w-0"
+                    >
+                      <BookOpen className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Documentation</span>
+                    </a>
+                    <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" asChild>
+                      <Link
+                        to={instanceSettingsTarget}
+                        aria-label="Instance settings"
+                        title="Instance settings"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </>
                 )}
-                <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" asChild>
-                  <Link
-                    to={instanceSettingsTarget}
-                    aria-label="Instance settings"
-                    title="Instance settings"
-                    onClick={() => {
-                      if (isMobile) setSidebarOpen(false);
-                    }}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Link>
-                </Button>
+                {!isInstanceAdmin && <div className="flex-1" />}
                 <Button
                   type="button"
                   variant="ghost"
