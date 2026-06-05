@@ -3,6 +3,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { companies, companyMemberships, instanceUserRoles, invites } from "@paperclipai/db";
 import type { DeploymentMode } from "@paperclipai/shared";
+import { ensureHumanRoleDefaultGrants } from "./services/principal-access-compatibility.js";
 
 const LOCAL_BOARD_USER_ID = "local-board";
 const CLAIM_TTL_MS = 1000 * 60 * 60 * 24;
@@ -96,6 +97,7 @@ export async function claimBoardOwnership(
   const status = getChallengeStatus(opts.token, opts.code);
   if (status !== "available") return { status };
 
+  const claimedCompanyIds: string[] = [];
   await db.transaction(async (tx) => {
     const existingTargetAdmin = await tx
       .select({ id: instanceUserRoles.id })
@@ -115,6 +117,7 @@ export async function claimBoardOwnership(
 
     const allCompanies = await tx.select({ id: companies.id }).from(companies);
     for (const company of allCompanies) {
+      claimedCompanyIds.push(company.id);
       const existing = await tx
         .select({ id: companyMemberships.id, status: companyMemberships.status })
         .from(companyMemberships)
@@ -146,6 +149,15 @@ export async function claimBoardOwnership(
       }
     }
   });
+
+  for (const companyId of claimedCompanyIds) {
+    await ensureHumanRoleDefaultGrants(db, {
+      companyId,
+      principalId: opts.userId,
+      membershipRole: "owner",
+      grantedByUserId: opts.userId,
+    });
+  }
 
   if (activeChallenge && activeChallenge.token === opts.token) {
     activeChallenge.claimedAt = new Date();
