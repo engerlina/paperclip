@@ -26,17 +26,26 @@ Paperclip runs as a single Node.js server backed by PostgreSQL. The server handl
 
 ## Post-Deployment Setup
 
-After deployment completes, visit your Railway-provided URL. You'll see an "Instance setup required" screen — this is expected on first boot.
+After deployment completes, Paperclip automatically generates a one-time admin invite URL on first boot. To find it:
 
-To create the first admin account, open a terminal and run:
+1. Open the Railway dashboard → your project → **paperclip-server** service
+2. Click the latest deployment → **Deploy Logs** tab
+3. Look for the `FIRST-TIME SETUP` block containing the invite URL:
 
-```sh
-railway ssh -s paperclip-server -- "yes | pnpm paperclipai auth bootstrap-ceo"
+```text
+FIRST-TIME SETUP
+No admin account exists yet. Open this URL to create the first admin:
+https://your-app.up.railway.app/invite/pcp_bootstrap_...
+This link expires in 72 hours.
 ```
 
-This generates a one-time invite URL. Open it in your browser to register the admin account.
+4. Open that URL in your browser to register the first admin account
 
-> **Note:** You need the [Railway CLI](https://docs.railway.com/develop/cli) installed and linked to your project (`railway login && railway link`).
+No CLI or SSH access required. If the link expires, install the [Railway CLI](https://docs.railway.com/develop/cli) and run:
+
+```sh
+railway ssh -s paperclip-server -- "yes | pnpm paperclipai auth bootstrap-ceo --force"
+```
 
 ## Why Deploy Paperclip on Railway?
 
