@@ -119,7 +119,14 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
     process.env.PAPERCLIP_PUBLIC_URL?.trim() ||
     (railwayDomain ? `https://${railwayDomain}` : undefined) ||
     baseUrl;
-  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.PAPERCLIP_AGENT_JWT_SECRET ?? "paperclip-dev-secret";
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.PAPERCLIP_AGENT_JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      "BETTER_AUTH_SECRET (or PAPERCLIP_AGENT_JWT_SECRET) must be set. " +
+        "This is normally provisioned automatically on first startup via ensureAuthSecret(); " +
+        "set it explicitly if you construct Better Auth outside the server bootstrap.",
+    );
+  }
   const disableSecureCookies = shouldDisableSecureAuthCookies({
     deploymentMode: config.deploymentMode,
     deploymentExposure: config.deploymentExposure,

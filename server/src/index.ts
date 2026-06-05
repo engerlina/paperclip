@@ -26,7 +26,9 @@ import {
 } from "@paperclipai/db";
 import detectPort from "detect-port";
 import { createApp } from "./app.js";
+import { ensureAuthSecret } from "./auth/ensure-auth-secret.js";
 import { loadConfig } from "./config.js";
+import { resolvePaperclipInstanceRoot } from "./home-paths.js";
 import { logger } from "./middleware/logger.js";
 import { setupLiveEventsWebSocketServer } from "./realtime/live-events-ws.js";
 import {
@@ -92,6 +94,10 @@ export interface StartedServer {
 export async function startServer(): Promise<StartedServer> {
   let config = loadConfig();
   initTelemetry({ enabled: config.telemetryEnabled });
+  // Provision a stable auth/JWT secret before anything that signs or verifies tokens.
+  // Generates and persists one on the data volume on first boot when no secret env var
+  // is provided, so zero-config deploys stay secure without a hardcoded fallback.
+  ensureAuthSecret(resolvePaperclipInstanceRoot());
   if (process.env.PAPERCLIP_SECRETS_PROVIDER === undefined) {
     process.env.PAPERCLIP_SECRETS_PROVIDER = config.secretsProvider;
   }
