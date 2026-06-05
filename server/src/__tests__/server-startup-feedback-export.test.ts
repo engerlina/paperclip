@@ -188,6 +188,7 @@ vi.mock("../startup-banner.js", () => ({
 vi.mock("../board-claim.js", () => ({
   getBoardClaimWarningUrl: vi.fn(() => null),
   initializeBoardClaimChallenge: vi.fn(async () => undefined),
+  maybeAutoBootstrapCeoInvite: vi.fn(async () => undefined),
 }));
 
 vi.mock("../auth/better-auth.js", () => ({

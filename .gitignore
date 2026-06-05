@@ -13,6 +13,7 @@ coverage/
 data/
 .paperclip/
 .pnpm-store/
+~.pnpm-store/
 tmp-*
 cli/tmp/
 
