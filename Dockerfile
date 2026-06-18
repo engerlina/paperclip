@@ -69,6 +69,31 @@ RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/cod
   && mkdir -p /paperclip \
   && chown node:node /paperclip
 
+# Chromium/Playwright system dependencies (Debian trixie t64 package names)
+# Required for headless Chrome to run inside agent containers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libglib2.0-0t64 \
+      libnss3 \
+      libnspr4 \
+      libatk1.0-0t64 \
+      libatk-bridge2.0-0t64 \
+      libcups2t64 \
+      libdrm2 \
+      libxkbcommon0 \
+      libxcomposite1 \
+      libxdamage1 \
+      libxfixes3 \
+      libxrandr2 \
+      libgbm1 \
+      libasound2t64 \
+      libpangocairo-1.0-0 \
+      libpango-1.0-0 \
+      libcairo2 \
+      libgtk-3-0t64 \
+      libxshmfence1 \
+      fonts-liberation \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN printf '#!/bin/sh\nset -e\nchown -R node:node /paperclip 2>/dev/null || true\nexec gosu node "$@"\n' > /usr/local/bin/entrypoint.sh \
   && chmod +x /usr/local/bin/entrypoint.sh
 
